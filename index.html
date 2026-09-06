@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PWA Chat</title>
+  <title>PWA Chat con Subida a Drive</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
     body { background-color: #f0f2f5; display: flex; justify-content: center; height: 100vh; }
@@ -13,14 +13,11 @@
       box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     
-    /* Login Form */
     #loginView { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
     #loginView h2 { text-align: center; color: #0084ff; }
     
-    /* Header Chat */
     .chat-header { background: #0084ff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
     
-    /* Area de Mensajes */
     .messages-area { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
     
     .msg-card { max-width: 80%; padding: 10px; border-radius: 8px; background: white; align-self: flex-start; position: relative; }
@@ -29,15 +26,19 @@
     .msg-author { font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px; }
     .msg-text { font-size: 14px; word-break: break-word; }
     .msg-time { font-size: 10px; color: #888; text-align: right; margin-top: 4px; }
-    .msg-img { max-width: 100%; border-radius: 6px; margin-top: 5px; }
+    .msg-img { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
     
     .btn-del { position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 12px; }
     
-    /* Input Form */
     .input-area { padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #f0f0f0; border-top: 1px solid #ccc; }
     .input-row { display: flex; gap: 6px; }
-    input { padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; outline: none; }
-    .input-row input { flex: 1; }
+    
+    input[type="text"], input[type="email"], input[type="password"] {
+      padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; outline: none; width: 100%;
+    }
+    .input-row input[type="text"] { flex: 1; }
+    
+    .file-input-wrapper { font-size: 12px; color: #555; display: flex; align-items: center; gap: 8px; }
     
     button { background: #0084ff; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
     button:disabled { background: #a0c4ff; }
@@ -47,7 +48,7 @@
 
 <div class="chat-container">
 
-  <!-- VISTA 1: LOGIN -->
+  <!-- VISTA LOGIN -->
   <div id="loginView">
     <h2>Iniciar Sesión</h2>
     <input type="email" id="loginCorreo" placeholder="Correo electrónico" required>
@@ -55,19 +56,20 @@
     <button id="btnLogin" onclick="ejecutarLogin()">Entrar al Chat</button>
   </div>
 
-  <!-- VISTA 2: CHAT -->
+  <!-- VISTA CHAT -->
   <div id="chatView" style="display: none; height: 100%; flex-direction: column;">
     <div class="chat-header">
       <span id="labelUsuario">Usuario</span>
       <button onclick="cerrarSesion()" style="background: transparent; border: 1px solid white; padding: 4px 8px; font-size: 12px;">Salir</button>
     </div>
 
-    <div class="messages-area" id="messagesArea">
-      <!-- Los mensajes se cargan aquí -->
-    </div>
+    <div class="messages-area" id="messagesArea"></div>
 
     <form class="input-area" id="chatForm">
-      <input type="url" id="inputImgUrl" placeholder="Enlace de imagen (Opcional)">
+      <div class="file-input-wrapper">
+        <label for="inputFile">📷 Adjuntar imagen:</label>
+        <input type="file" id="inputFile" accept="image/*">
+      </div>
       <div class="input-row">
         <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." required>
         <button type="submit" id="btnEnviar">Enviar</button>
@@ -78,14 +80,11 @@
 </div>
 
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiLWeh7D-7a55Ot1KuvstHtHVVh3OM8C_PE3NBU_saozJ2L0vCFZKkaxUOIvbNN7Rl/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzoYABgyburVR2AB_FWaNbVdbfU2CRgHn67Hk-fG3USMTfWUfghKm-GLoZTKTPKdblf/exec';
   let currentUser = localStorage.getItem('chat_user') || null;
   let pollingInterval = null;
 
-  // Control de Vistas
-  if (currentUser) {
-    mostrarChat();
-  }
+  if (currentUser) mostrarChat();
 
   async function ejecutarLogin() {
     const correo = document.getElementById('loginCorreo').value;
@@ -116,7 +115,6 @@
       }
     } catch (err) {
       alert('Error de conexión');
-      console.error(err);
     } finally {
       btn.disabled = false;
       btn.innerText = 'Entrar al Chat';
@@ -129,7 +127,6 @@
     document.getElementById('labelUsuario').innerText = `Hola, ${currentUser}`;
     
     cargarMensajes();
-    // Polling cada 3 segundos para consultar mensajes nuevos
     pollingInterval = setInterval(cargarMensajes, 3000);
   }
 
@@ -139,6 +136,16 @@
     location.reload();
   }
 
+  // Convertir archivo seleccionado a Base64
+  function fileToBase64(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
+  }
+
   async function cargarMensajes() {
     try {
       const res = await fetch(SCRIPT_URL);
@@ -146,7 +153,7 @@
       
       const area = document.getElementById('messagesArea');
       if (!data || data.length === 0) {
-        area.innerHTML = '<p style="text-align:center; color:#666;">No hay mensajes aun.</p>';
+        area.innerHTML = '<p style="text-align:center; color:#666;">No hay mensajes aún.</p>';
         return;
       }
 
@@ -180,16 +187,29 @@
     e.preventDefault();
     const btn = document.getElementById('btnEnviar');
     const inputMsg = document.getElementById('inputMensaje');
-    const inputImg = document.getElementById('inputImgUrl');
+    const fileInput = document.getElementById('inputFile');
 
     if (!inputMsg.value.trim()) return;
 
     btn.disabled = true;
+    btn.innerText = 'Subiendo...';
+
+    let imageData = null;
+
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      const base64 = await fileToBase64(file);
+      imageData = {
+        name: file.name,
+        base64: base64
+      };
+    }
+
     const payload = {
       action: 'sendMessage',
       usuario: currentUser,
       mensaje: inputMsg.value,
-      imageUrl: inputImg.value
+      imageFile: imageData
     };
 
     try {
@@ -201,12 +221,13 @@
       });
 
       inputMsg.value = '';
-      inputImg.value = '';
+      fileInput.value = '';
       await cargarMensajes();
     } catch (err) {
-      alert('Error al enviar mensaje');
+      alert('Error al enviar el mensaje');
     } finally {
       btn.disabled = false;
+      btn.innerText = 'Enviar';
     }
   });
 
