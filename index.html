@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PWA con Google Sheets Backend</title>
+  <style>
+    body { font-family: sans-serif; max-width: 500px; margin: 20px auto; padding: 0 10px; }
+    form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+    input, button { padding: 8px; font-size: 16px; }
+    #datos { background: #f4f4f4; padding: 10px; border-radius: 4px; }
+  </style>
+</head>
+<body>
+
+  <h2>Sobreescribir Datos en Google Sheet</h2>
+
+  <form id="miFormulario">
+    <input type="text" id="nombre" placeholder="Tu nombre" required>
+    <input type="text" id="mensaje" placeholder="Tu mensaje" required>
+    <button type="submit" id="btnGuardar">Guardar y Actualizar</button>
+  </form>
+
+  <h3>Datos Actuales:</h3>
+  <div id="datos">Cargando...</div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5gawfnAvXYYPh5217hwpflIZFYxmTxxkM4MACSSXbHRjSXRz1A-3fFUnirtgJsu-h/exec';
+
+    // Leer datos directo del Apps Script (sin la demora de "Publicar en la Web")
+    async function cargarDatos() {
+      const contenedor = document.getElementById('datos');
+      contenedor.innerText = 'Cargando datos frescos...';
+      try {
+        const res = await fetch(SCRIPT_URL);
+        const data = await res.json();
+        
+        if (data.length === 0) {
+          contenedor.innerHTML = '<p>No hay datos guardados.</p>';
+          return;
+        }
+
+        contenedor.innerHTML = data.map(item => `<p><strong>${item.Nombre}:</strong> ${item.Mensaje}</p>`).join('');
+      } catch (err) {
+        contenedor.innerText = 'Error al cargar los datos.';
+        console.error(err);
+      }
+    }
+
+    // Enviar datos para sobreescribir e inmediatamente releer
+    document.getElementById('miFormulario').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('btnGuardar');
+      btn.disabled = true;
+      btn.innerText = 'Guardando...';
+
+      const payload = {
+        nombre: document.getElementById('nombre').value,
+        mensaje: document.getElementById('mensaje').value
+      };
+
+      try {
+        // Enviar vía POST con text/plain para evitar bloqueos de CORS preflight
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+
+        // Limpiar formulario y recargar datos frescos al instante
+        document.getElementById('miFormulario').reset();
+        await cargarDatos();
+      } catch (err) {
+        alert('Error al enviar los datos.');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btn.innerText = 'Guardar y Actualizar';
+      }
+    });
+
+    // Carga inicial al abrir la página
+    cargarDatos();
+  </script>
+</body>
+</html>
