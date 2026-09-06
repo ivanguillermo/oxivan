@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PWA con Google Sheets - Borrar Mensajes</title>
+  <title>PWA - Guardar Links de Imágenes en Drive</title>
   <style>
-    body { font-family: sans-serif; max-width: 500px; margin: 20px auto; padding: 0 10px; }
+    body { font-family: sans-serif; max-width: 550px; margin: 20px auto; padding: 0 10px; }
     form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
     input, button { padding: 8px; font-size: 16px; }
     
     .item-mensaje {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       background: #f4f4f4;
-      padding: 10px;
-      margin-bottom: 8px;
-      border-radius: 4px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 6px;
     }
+    .contenido { display: flex; flex-direction: column; gap: 6px; }
+    .img-preview { max-width: 200px; max-height: 150px; border-radius: 4px; object-fit: cover; margin-top: 5px; }
     .btn-borrar {
       background-color: #ff4d4d;
       color: white;
       border: none;
-      padding: 5px 10px;
-      border-radius: 3px;
+      padding: 6px 12px;
+      border-radius: 4px;
       cursor: pointer;
     }
     .btn-borrar:hover { background-color: #cc0000; }
@@ -31,24 +33,24 @@
 </head>
 <body>
 
-  <h2>Gestor de Mensajes</h2>
+  <h2>Publicar con Imagen vía Drive</h2>
 
   <form id="miFormulario">
     <input type="text" id="nombre" placeholder="Tu nombre" required>
     <input type="text" id="mensaje" placeholder="Tu mensaje" required>
-    <button type="submit" id="btnGuardar">Guardar y Actualizar</button>
+    <input type="url" id="imageUrl" placeholder="Enlace de la imagen (http://...) (Opcional)">
+    <button type="submit" id="btnGuardar">Guardar y Procesar en Drive</button>
   </form>
 
-  <h3>Datos Actuales:</h3>
+  <h3>Registros en la Hoja:</h3>
   <div id="datos">Cargando...</div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd-bJeW4d5niMGTFSzXvLJFaKUfVpvuphJN252b1JL3cJdlZvr5A19NakWFIGzxhpO/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxT36pj1eb88XwjsGQBgnQkjlyqY9splxzI6WIgFFl-oJ5AviOMjYSeHdGvimF4tJBO/exec';
 
-    // Leer datos y renderizar cada item con un botón de eliminar
     async function cargarDatos() {
       const contenedor = document.getElementById('datos');
-      contenedor.innerText = 'Cargando datos frescos...';
+      contenedor.innerText = 'Cargando datos...';
       try {
         const res = await fetch(SCRIPT_URL);
         const data = await res.json();
@@ -58,30 +60,40 @@
           return;
         }
 
-        contenedor.innerHTML = data.map(item => `
-          <div class="item-mensaje">
-            <div>
-              <strong>${item.Nombre}:</strong> ${item.Mensaje}
+        contenedor.innerHTML = data.map(item => {
+          let htmlImagen = '';
+          if (item.ImagenURL && item.ImagenURL.startsWith('http')) {
+            htmlImagen = `<br><img src="${item.ImagenURL}" class="img-preview" alt="Imagen en Drive" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=Error+al+cargar';">`;
+          } else if (item.ImagenURL) {
+            htmlImagen = `<br><small style="color:red;">${item.ImagenURL}</small>`;
+          }
+
+          return `
+            <div class="item-mensaje">
+              <div class="contenido">
+                <div><strong>${item.Nombre}:</strong> ${item.Mensaje}</div>
+                ${htmlImagen}
+              </div>
+              <button class="btn-borrar" onclick="borrarMensaje(${item.rowIndex})">Eliminar</button>
             </div>
-            <button class="btn-borrar" onclick="borrarMensaje(${item.rowIndex})">Eliminar</button>
-          </div>
-        `).join('');
+          `;
+        }).join('');
       } catch (err) {
         contenedor.innerText = 'Error al cargar los datos.';
         console.error(err);
       }
     }
 
-    // Enviar nuevo mensaje
     document.getElementById('miFormulario').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnGuardar');
       btn.disabled = true;
-      btn.innerText = 'Guardando...';
+      btn.innerText = 'Procesando en Drive...';
 
       const payload = {
         nombre: document.getElementById('nombre').value,
-        mensaje: document.getElementById('mensaje').value
+        mensaje: document.getElementById('mensaje').value,
+        imageUrl: document.getElementById('imageUrl').value
       };
 
       try {
@@ -95,17 +107,16 @@
         document.getElementById('miFormulario').reset();
         await cargarDatos();
       } catch (err) {
-        alert('Error al enviar los datos.');
+        alert('Error al procesar el mensaje.');
         console.error(err);
       } finally {
         btn.disabled = false;
-        btn.innerText = 'Guardar y Actualizar';
+        btn.innerText = 'Guardar y Procesar en Drive';
       }
     });
 
-    // Función para borrar un mensaje según su fila
     async function borrarMensaje(rowIndex) {
-      if (!confirm('¿Estás seguro de eliminar este mensaje?')) return;
+      if (!confirm('¿Deseas eliminar este registro de la hoja?')) return;
 
       try {
         await fetch(SCRIPT_URL, {
@@ -118,15 +129,13 @@
           })
         });
 
-        // Releer el sheet para recalcular los índices de las filas y mostrar el contenido actualizado
         await cargarDatos();
       } catch (err) {
-        alert('Error al eliminar el mensaje.');
+        alert('Error al eliminar.');
         console.error(err);
       }
     }
 
-    // Carga inicial
     cargarDatos();
   </script>
 </body>
