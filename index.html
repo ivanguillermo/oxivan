@@ -3,140 +3,228 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PWA - Guardar Links de Imágenes en Drive</title>
+  <title>PWA Chat</title>
   <style>
-    body { font-family: sans-serif; max-width: 550px; margin: 20px auto; padding: 0 10px; }
-    form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
-    input, button { padding: 8px; font-size: 16px; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background-color: #f0f2f5; display: flex; justify-content: center; height: 100vh; }
     
-    .item-mensaje {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      background: #f4f4f4;
-      padding: 12px;
-      margin-bottom: 10px;
-      border-radius: 6px;
+    .chat-container {
+      width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; height: 100%;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-    .contenido { display: flex; flex-direction: column; gap: 6px; }
-    .img-preview { max-width: 200px; max-height: 150px; border-radius: 4px; object-fit: cover; margin-top: 5px; }
-    .btn-borrar {
-      background-color: #ff4d4d;
-      color: white;
-      border: none;
-      padding: 6px 12px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-    .btn-borrar:hover { background-color: #cc0000; }
+    
+    /* Login Form */
+    #loginView { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
+    #loginView h2 { text-align: center; color: #0084ff; }
+    
+    /* Header Chat */
+    .chat-header { background: #0084ff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    
+    /* Area de Mensajes */
+    .messages-area { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
+    
+    .msg-card { max-width: 80%; padding: 10px; border-radius: 8px; background: white; align-self: flex-start; position: relative; }
+    .msg-card.mine { align-self: flex-end; background: #dcf8c6; }
+    
+    .msg-author { font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px; }
+    .msg-text { font-size: 14px; word-break: break-word; }
+    .msg-time { font-size: 10px; color: #888; text-align: right; margin-top: 4px; }
+    .msg-img { max-width: 100%; border-radius: 6px; margin-top: 5px; }
+    
+    .btn-del { position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 12px; }
+    
+    /* Input Form */
+    .input-area { padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #f0f0f0; border-top: 1px solid #ccc; }
+    .input-row { display: flex; gap: 6px; }
+    input { padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; outline: none; }
+    .input-row input { flex: 1; }
+    
+    button { background: #0084ff; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    button:disabled { background: #a0c4ff; }
   </style>
 </head>
 <body>
 
-  <h2>Publicar con Imagen vía Drive</h2>
+<div class="chat-container">
 
-  <form id="miFormulario">
-    <input type="text" id="nombre" placeholder="Tu nombre" required>
-    <input type="text" id="mensaje" placeholder="Tu mensaje" required>
-    <input type="url" id="imageUrl" placeholder="Enlace de la imagen (http://...) (Opcional)">
-    <button type="submit" id="btnGuardar">Guardar y Procesar en Drive</button>
-  </form>
+  <!-- VISTA 1: LOGIN -->
+  <div id="loginView">
+    <h2>Iniciar Sesión</h2>
+    <input type="email" id="loginCorreo" placeholder="Correo electrónico" required>
+    <input type="password" id="loginClave" placeholder="Contraseña" required>
+    <button id="btnLogin" onclick="ejecutarLogin()">Entrar al Chat</button>
+  </div>
 
-  <h3>Registros en la Hoja:</h3>
-  <div id="datos">Cargando...</div>
+  <!-- VISTA 2: CHAT -->
+  <div id="chatView" style="display: none; height: 100%; flex-direction: column;">
+    <div class="chat-header">
+      <span id="labelUsuario">Usuario</span>
+      <button onclick="cerrarSesion()" style="background: transparent; border: 1px solid white; padding: 4px 8px; font-size: 12px;">Salir</button>
+    </div>
 
-  <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxT36pj1eb88XwjsGQBgnQkjlyqY9splxzI6WIgFFl-oJ5AviOMjYSeHdGvimF4tJBO/exec';
+    <div class="messages-area" id="messagesArea">
+      <!-- Los mensajes se cargan aquí -->
+    </div>
 
-    async function cargarDatos() {
-      const contenedor = document.getElementById('datos');
-      contenedor.innerText = 'Cargando datos...';
-      try {
-        const res = await fetch(SCRIPT_URL);
-        const data = await res.json();
-        
-        if (!data || data.length === 0) {
-          contenedor.innerHTML = '<p>No hay datos guardados.</p>';
-          return;
-        }
+    <form class="input-area" id="chatForm">
+      <input type="url" id="inputImgUrl" placeholder="Enlace de imagen (Opcional)">
+      <div class="input-row">
+        <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." required>
+        <button type="submit" id="btnEnviar">Enviar</button>
+      </div>
+    </form>
+  </div>
 
-        contenedor.innerHTML = data.map(item => {
-          let htmlImagen = '';
-          if (item.ImagenURL && item.ImagenURL.startsWith('http')) {
-            htmlImagen = `<br><img src="${item.ImagenURL}" class="img-preview" alt="Imagen en Drive" onerror="this.onerror=null;this.src='https://via.placeholder.com/150?text=Error+al+cargar';">`;
-          } else if (item.ImagenURL) {
-            htmlImagen = `<br><small style="color:red;">${item.ImagenURL}</small>`;
-          }
+</div>
 
-          return `
-            <div class="item-mensaje">
-              <div class="contenido">
-                <div><strong>${item.Nombre}:</strong> ${item.Mensaje}</div>
-                ${htmlImagen}
-              </div>
-              <button class="btn-borrar" onclick="borrarMensaje(${item.rowIndex})">Eliminar</button>
-            </div>
-          `;
-        }).join('');
-      } catch (err) {
-        contenedor.innerText = 'Error al cargar los datos.';
-        console.error(err);
+<script>
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyiLWeh7D-7a55Ot1KuvstHtHVVh3OM8C_PE3NBU_saozJ2L0vCFZKkaxUOIvbNN7Rl/exec';
+  let currentUser = localStorage.getItem('chat_user') || null;
+  let pollingInterval = null;
+
+  // Control de Vistas
+  if (currentUser) {
+    mostrarChat();
+  }
+
+  async function ejecutarLogin() {
+    const correo = document.getElementById('loginCorreo').value;
+    const clave = document.getElementById('loginClave').value;
+    const btn = document.getElementById('btnLogin');
+
+    if (!correo || !clave) return alert('Ingresa correo y clave');
+
+    btn.disabled = true;
+    btn.innerText = 'Validando...';
+
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'login', correo: correo, clave: clave })
+      });
+      
+      const data = await res.json();
+
+      if (data.status === 'success') {
+        currentUser = data.nombre;
+        localStorage.setItem('chat_user', currentUser);
+        mostrarChat();
+      } else {
+        alert(data.message || 'Error de autenticación');
       }
+    } catch (err) {
+      alert('Error de conexión');
+      console.error(err);
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Entrar al Chat';
     }
+  }
 
-    document.getElementById('miFormulario').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('btnGuardar');
-      btn.disabled = true;
-      btn.innerText = 'Procesando en Drive...';
+  function mostrarChat() {
+    document.getElementById('loginView').style.display = 'none';
+    document.getElementById('chatView').style.display = 'flex';
+    document.getElementById('labelUsuario').innerText = `Hola, ${currentUser}`;
+    
+    cargarMensajes();
+    // Polling cada 3 segundos para consultar mensajes nuevos
+    pollingInterval = setInterval(cargarMensajes, 3000);
+  }
 
-      const payload = {
-        nombre: document.getElementById('nombre').value,
-        mensaje: document.getElementById('mensaje').value,
-        imageUrl: document.getElementById('imageUrl').value
-      };
+  function cerrarSesion() {
+    localStorage.removeItem('chat_user');
+    clearInterval(pollingInterval);
+    location.reload();
+  }
 
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-
-        document.getElementById('miFormulario').reset();
-        await cargarDatos();
-      } catch (err) {
-        alert('Error al procesar el mensaje.');
-        console.error(err);
-      } finally {
-        btn.disabled = false;
-        btn.innerText = 'Guardar y Procesar en Drive';
+  async function cargarMensajes() {
+    try {
+      const res = await fetch(SCRIPT_URL);
+      const data = await res.json();
+      
+      const area = document.getElementById('messagesArea');
+      if (!data || data.length === 0) {
+        area.innerHTML = '<p style="text-align:center; color:#666;">No hay mensajes aun.</p>';
+        return;
       }
-    });
 
-    async function borrarMensaje(rowIndex) {
-      if (!confirm('¿Deseas eliminar este registro de la hoja?')) return;
+      area.innerHTML = data.map(item => {
+        const esMio = item.Usuario === currentUser;
+        const imgTag = item.ImagenURL && item.ImagenURL.startsWith('http') 
+          ? `<img src="${item.ImagenURL}" class="msg-img" alt="Imagen adjunta">` 
+          : '';
+          
+        const btnDelete = esMio 
+          ? `<button class="btn-del" onclick="borrarMensaje(${item.rowIndex})">✕</button>` 
+          : '';
 
-      try {
-        await fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'delete',
-            rowIndex: rowIndex
-          })
-        });
+        return `
+          <div class="msg-card ${esMio ? 'mine' : ''}">
+            ${btnDelete}
+            <div class="msg-author">${item.Usuario}</div>
+            <div class="msg-text">${item.Mensaje}</div>
+            ${imgTag}
+            <div class="msg-time">${item.Fecha}</div>
+          </div>
+        `;
+      }).join('');
 
-        await cargarDatos();
-      } catch (err) {
-        alert('Error al eliminar.');
-        console.error(err);
-      }
+    } catch (err) {
+      console.error("Error leyendo chat:", err);
     }
+  }
 
-    cargarDatos();
-  </script>
+  document.getElementById('chatForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btnEnviar');
+    const inputMsg = document.getElementById('inputMensaje');
+    const inputImg = document.getElementById('inputImgUrl');
+
+    if (!inputMsg.value.trim()) return;
+
+    btn.disabled = true;
+    const payload = {
+      action: 'sendMessage',
+      usuario: currentUser,
+      mensaje: inputMsg.value,
+      imageUrl: inputImg.value
+    };
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      inputMsg.value = '';
+      inputImg.value = '';
+      await cargarMensajes();
+    } catch (err) {
+      alert('Error al enviar mensaje');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  async function borrarMensaje(rowIndex) {
+    if (!confirm('¿Eliminar este mensaje?')) return;
+
+    try {
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+      });
+      await cargarMensajes();
+    } catch (err) {
+      alert('Error al eliminar');
+    }
+  }
+</script>
 </body>
 </html>
