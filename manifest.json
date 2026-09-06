@@ -1,0 +1,21 @@
+{
+  "name": "PWA Chat",
+  "short_name": "PWAChat",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f0f2f5",
+  "theme_color": "#0084ff",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": ".assets/oxivan_logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": ".assets/oxivan_logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
