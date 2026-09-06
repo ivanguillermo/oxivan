@@ -3,17 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PWA con Google Sheets Backend</title>
+  <title>PWA con Google Sheets - Borrar Mensajes</title>
   <style>
     body { font-family: sans-serif; max-width: 500px; margin: 20px auto; padding: 0 10px; }
     form { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
     input, button { padding: 8px; font-size: 16px; }
-    #datos { background: #f4f4f4; padding: 10px; border-radius: 4px; }
+    
+    .item-mensaje {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f4f4f4;
+      padding: 10px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+    }
+    .btn-borrar {
+      background-color: #ff4d4d;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .btn-borrar:hover { background-color: #cc0000; }
   </style>
 </head>
 <body>
 
-  <h2>Sobreescribir Datos en Google Sheet</h2>
+  <h2>Gestor de Mensajes</h2>
 
   <form id="miFormulario">
     <input type="text" id="nombre" placeholder="Tu nombre" required>
@@ -25,9 +43,9 @@
   <div id="datos">Cargando...</div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbw5gawfnAvXYYPh5217hwpflIZFYxmTxxkM4MACSSXbHRjSXRz1A-3fFUnirtgJsu-h/exec';
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxd-bJeW4d5niMGTFSzXvLJFaKUfVpvuphJN252b1JL3cJdlZvr5A19NakWFIGzxhpO/exec';
 
-    // Leer datos directo del Apps Script (sin la demora de "Publicar en la Web")
+    // Leer datos y renderizar cada item con un botón de eliminar
     async function cargarDatos() {
       const contenedor = document.getElementById('datos');
       contenedor.innerText = 'Cargando datos frescos...';
@@ -35,19 +53,26 @@
         const res = await fetch(SCRIPT_URL);
         const data = await res.json();
         
-        if (data.length === 0) {
+        if (!data || data.length === 0) {
           contenedor.innerHTML = '<p>No hay datos guardados.</p>';
           return;
         }
 
-        contenedor.innerHTML = data.map(item => `<p><strong>${item.Nombre}:</strong> ${item.Mensaje}</p>`).join('');
+        contenedor.innerHTML = data.map(item => `
+          <div class="item-mensaje">
+            <div>
+              <strong>${item.Nombre}:</strong> ${item.Mensaje}
+            </div>
+            <button class="btn-borrar" onclick="borrarMensaje(${item.rowIndex})">Eliminar</button>
+          </div>
+        `).join('');
       } catch (err) {
         contenedor.innerText = 'Error al cargar los datos.';
         console.error(err);
       }
     }
 
-    // Enviar datos para sobreescribir e inmediatamente releer
+    // Enviar nuevo mensaje
     document.getElementById('miFormulario').addEventListener('submit', async (e) => {
       e.preventDefault();
       const btn = document.getElementById('btnGuardar');
@@ -60,7 +85,6 @@
       };
 
       try {
-        // Enviar vía POST con text/plain para evitar bloqueos de CORS preflight
         await fetch(SCRIPT_URL, {
           method: 'POST',
           mode: 'cors',
@@ -68,7 +92,6 @@
           body: JSON.stringify(payload)
         });
 
-        // Limpiar formulario y recargar datos frescos al instante
         document.getElementById('miFormulario').reset();
         await cargarDatos();
       } catch (err) {
@@ -80,7 +103,30 @@
       }
     });
 
-    // Carga inicial al abrir la página
+    // Función para borrar un mensaje según su fila
+    async function borrarMensaje(rowIndex) {
+      if (!confirm('¿Estás seguro de eliminar este mensaje?')) return;
+
+      try {
+        await fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'delete',
+            rowIndex: rowIndex
+          })
+        });
+
+        // Releer el sheet para recalcular los índices de las filas y mostrar el contenido actualizado
+        await cargarDatos();
+      } catch (err) {
+        alert('Error al eliminar el mensaje.');
+        console.error(err);
+      }
+    }
+
+    // Carga inicial
     cargarDatos();
   </script>
 </body>
