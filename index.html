@@ -3,51 +3,75 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Oxivan Chat</title>
-  <!-- En el <head> de index.html -->
+  <title>OXIVAN Chat</title>
+  
+  <!-- Logo en pestaña y PWA -->
+  <link rel="icon" type="image/png" href="logo.png">
+  <link rel="apple-touch-icon" href="logo.png">
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0084ff">
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="apple-touch-icon" href="./assets/oxivan_logo.jpg">
+  <meta name="theme-color" content="#B8934A">
+
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
-    body { background-color: #f0f2f5; display: flex; justify-content: center; height: 100vh; }
+    body { background-color: #2b2315; display: flex; justify-content: center; height: 100vh; }
     
     .chat-container {
       width: 100%; max-width: 500px; background: white; display: flex; flex-direction: column; height: 100%;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
     }
     
-    #loginView { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; }
-    #loginView h2 { text-align: center; color: #0084ff; }
+    /* Login */
+    #loginView { padding: 30px 20px; display: flex; flex-direction: column; gap: 15px; justify-content: center; height: 100%; align-items: center; background: #fffdf7; }
+    .brand-logo { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 3px solid #B8934A; }
+    #loginView h2 { color: #906F2F; margin-bottom: 10px; }
     
-    .chat-header { background: #0084ff; color: white; padding: 15px; display: flex; justify-content: space-between; align-items: center; }
+    /* Install Banner */
+    #installBanner {
+      display: none; background: #E5C378; padding: 10px 15px; border-radius: 8px; width: 100%;
+      align-items: center; justify-content: space-between; border: 1px solid #B8934A; margin-bottom: 10px;
+    }
+    .btn-install-banner { background: #906F2F; color: white; border: none; padding: 6px 12px; border-radius: 12px; cursor: pointer; font-size: 12px; }
+
+    /* Header */
+    .chat-header { background: #B8934A; color: white; padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+    .user-info-header { display: flex; align-items: center; gap: 10px; }
+    .header-fdp { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid white; background: #fff; }
     
-    .messages-area { flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #e5ddd5; }
+    /* Chat Area */
+    .messages-area { 
+      flex: 1; padding: 15px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; 
+      background: radial-gradient(circle at center, #E5C378 0%, #B8934A 70%, #906F2F 100%);
+    }
     
-    .msg-card { max-width: 80%; padding: 10px; border-radius: 8px; background: white; align-self: flex-start; position: relative; }
-    .msg-card.mine { align-self: flex-end; background: #dcf8c6; }
+    .msg-card { 
+      max-width: 80%; padding: 10px 12px; border-radius: 12px; background: white; align-self: flex-start; 
+      position: relative; display: flex; gap: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .msg-card.mine { align-self: flex-end; background: #FFF4D4; flex-direction: row-reverse; }
     
-    .msg-author { font-size: 11px; font-weight: bold; color: #555; margin-bottom: 3px; }
-    .msg-text { font-size: 14px; word-break: break-word; }
-    .msg-time { font-size: 10px; color: #888; text-align: right; margin-top: 4px; }
+    .msg-avatar { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex-shrink: 0; background: #ccc; }
+    .msg-body { flex: 1; }
+    .msg-author { font-size: 11px; font-weight: bold; color: #906F2F; margin-bottom: 2px; }
+    .msg-text { font-size: 14px; word-break: break-word; color: #222; }
+    .msg-time { font-size: 10px; color: #777; text-align: right; margin-top: 4px; }
     .msg-img { max-width: 100%; border-radius: 6px; margin-top: 5px; display: block; }
     
-    .btn-del { position: absolute; top: 4px; right: 4px; background: transparent; border: none; color: #888; cursor: pointer; font-size: 12px; }
+    .btn-del { position: absolute; top: 2px; right: 6px; background: transparent; border: none; color: #a98338; cursor: pointer; font-size: 11px; }
     
-    .input-area { padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #f0f0f0; border-top: 1px solid #ccc; }
+    /* Inputs */
+    .input-area { padding: 10px; display: flex; flex-direction: column; gap: 8px; background: #fffdf7; border-top: 1px solid #E5C378; }
     .input-row { display: flex; gap: 6px; }
     
     input[type="text"], input[type="email"], input[type="password"] {
-      padding: 10px; border: 1px solid #ccc; border-radius: 20px; font-size: 14px; outline: none; width: 100%;
+      padding: 10px; border: 1px solid #B8934A; border-radius: 20px; font-size: 14px; outline: none; width: 100%; background: #fff;
     }
     .input-row input[type="text"] { flex: 1; }
     
-    .file-input-wrapper { font-size: 12px; color: #555; display: flex; align-items: center; gap: 8px; }
+    .file-input-wrapper { font-size: 12px; color: #6f5522; display: flex; align-items: center; gap: 8px; }
     
-    button { background: #0084ff; color: white; border: none; padding: 10px 15px; border-radius: 20px; font-weight: bold; cursor: pointer; }
-    button:disabled { background: #a0c4ff; }
+    button.btn-gold { background: #B8934A; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; }
+    button.btn-gold:disabled { background: #D6C29A; }
+    button.btn-gold:hover { background: #906F2F; }
   </style>
 </head>
 <body>
@@ -56,17 +80,27 @@
 
   <!-- VISTA LOGIN -->
   <div id="loginView">
+    <img src="logo.png" class="brand-logo" alt="Logo" onerror="this.style.display='none'">
     <h2>Iniciar Sesión</h2>
+
+    <div id="installBanner">
+      <span style="font-size: 12px; color: #4a3814;">¡Instala la App en tu inicio!</span>
+      <button class="btn-install-banner" onclick="instalarPWA()">Instalar</button>
+    </div>
+
     <input type="email" id="loginCorreo" placeholder="Correo electrónico" required>
     <input type="password" id="loginClave" placeholder="Contraseña" required>
-    <button id="btnLogin" onclick="ejecutarLogin()">Entrar al Chat</button>
+    <button id="btnLogin" class="btn-gold" onclick="ejecutarLogin()">Entrar al Chat</button>
   </div>
 
   <!-- VISTA CHAT -->
   <div id="chatView" style="display: none; height: 100%; flex-direction: column;">
     <div class="chat-header">
-      <span id="labelUsuario">Usuario</span>
-      <button onclick="cerrarSesion()" style="background: transparent; border: 1px solid white; padding: 4px 8px; font-size: 12px;">Salir</button>
+      <div class="user-info-header">
+        <img id="headerFdp" class="header-fdp" src="https://cdn-icons-png.flaticon.com/512/847/847969.png" alt="Foto">
+        <span id="labelUsuario" style="font-weight: bold;">Usuario</span>
+      </div>
+      <button onclick="cerrarSesion()" style="background: transparent; border: 1px solid white; color: white; padding: 4px 10px; border-radius: 12px; font-size: 12px; cursor: pointer;">Salir</button>
     </div>
 
     <div class="messages-area" id="messagesArea"></div>
@@ -78,7 +112,7 @@
       </div>
       <div class="input-row">
         <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." required>
-        <button type="submit" id="btnEnviar">Enviar</button>
+        <button type="submit" id="btnEnviar" class="btn-gold">Enviar</button>
       </div>
     </form>
   </div>
@@ -86,9 +120,28 @@
 </div>
 
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzS_fsW_PlFirFN3F7j0tWYJ1Fg34cd7FBhIM2qsQ60RkNGaXrj7GR2y_EPAVRsg8FI/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9h515IimDLvREyCd4YJ2kQTGUiHIbuYLggkSuWPA6r6qRnJE1X01ispiVSKmB8ngL/exec';
   let currentUser = localStorage.getItem('chat_user') || null;
+  let currentFdp = localStorage.getItem('chat_fdp') || '';
   let pollingInterval = null;
+  let deferredPrompt = null;
+
+  // Lógica de Instalación PWA
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+    document.getElementById('installBanner').style.display = 'flex';
+  });
+
+  function instalarPWA() {
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(() => {
+        deferredPrompt = null;
+        document.getElementById('installBanner').style.display = 'none';
+      });
+    }
+  }
 
   if (currentUser) mostrarChat();
 
@@ -114,7 +167,9 @@
 
       if (data.status === 'success') {
         currentUser = data.nombre;
+        currentFdp = data.fotoPerfil || '';
         localStorage.setItem('chat_user', currentUser);
+        localStorage.setItem('chat_fdp', currentFdp);
         mostrarChat();
       } else {
         alert(data.message || 'Error de autenticación');
@@ -130,19 +185,22 @@
   function mostrarChat() {
     document.getElementById('loginView').style.display = 'none';
     document.getElementById('chatView').style.display = 'flex';
-    document.getElementById('labelUsuario').innerText = `Hola, ${currentUser}`;
+    document.getElementById('labelUsuario').innerText = currentUser;
+    
+    if (currentFdp) {
+      document.getElementById('headerFdp').src = currentFdp;
+    }
     
     cargarMensajes();
     pollingInterval = setInterval(cargarMensajes, 3000);
   }
 
   function cerrarSesion() {
-    localStorage.removeItem('chat_user');
+    localStorage.clear();
     clearInterval(pollingInterval);
     location.reload();
   }
 
-  // Convertir archivo seleccionado a Base64
   function fileToBase64(file) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -159,7 +217,7 @@
       
       const area = document.getElementById('messagesArea');
       if (!data || data.length === 0) {
-        area.innerHTML = '<p style="text-align:center; color:#666;">No hay mensajes aún.</p>';
+        area.innerHTML = '<p style="text-align:center; color:#fff;">No hay mensajes aún.</p>';
         return;
       }
 
@@ -173,13 +231,18 @@
           ? `<button class="btn-del" onclick="borrarMensaje(${item.rowIndex})">✕</button>` 
           : '';
 
+        const avatarSrc = item.FotoPerfil || 'https://cdn-icons-png.flaticon.com/512/847/847969.png';
+
         return `
           <div class="msg-card ${esMio ? 'mine' : ''}">
-            ${btnDelete}
-            <div class="msg-author">${item.Usuario}</div>
-            <div class="msg-text">${item.Mensaje}</div>
-            ${imgTag}
-            <div class="msg-time">${item.Fecha}</div>
+            <img src="${avatarSrc}" class="msg-avatar" alt="Foto">
+            <div class="msg-body">
+              ${btnDelete}
+              <div class="msg-author">${item.Usuario}</div>
+              <div class="msg-text">${item.Mensaje}</div>
+              ${imgTag}
+              <div class="msg-time">${item.Fecha}</div>
+            </div>
           </div>
         `;
       }).join('');
@@ -205,10 +268,7 @@
     if (fileInput.files.length > 0) {
       const file = fileInput.files[0];
       const base64 = await fileToBase64(file);
-      imageData = {
-        name: file.name,
-        base64: base64
-      };
+      imageData = { name: file.name, base64: base64 };
     }
 
     const payload = {
@@ -252,14 +312,10 @@
       alert('Error al eliminar');
     }
   }
-  // Registro del Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(reg => console.log('Service Worker registrado con éxito', reg))
-      .catch(err => console.error('Error registrando Service Worker', err));
-  });
-}
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js');
+  }
 </script>
 </body>
 </html>
