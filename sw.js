@@ -2,7 +2,7 @@ const CACHE_NAME = 'pwa-chat-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
-  './manifest.json'
+  './manifest.json',
   './assets/oxivan_logo.jpg'
 
 ];
