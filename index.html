@@ -107,8 +107,8 @@
 
     <form class="input-area" id="chatForm">
       <div class="file-input-wrapper">
-        <label for="inputFile">📷 Adjuntar imagen:</label>
-        <input type="file" id="inputFile" accept="image/*">
+        <label for="inputFile">📎 Adjuntar archivo o tomar foto:</label>
+        <input type="file" id="inputFile" accept="image/*,application/pdf">
       </div>
       <div class="input-row">
         <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." required>
@@ -120,7 +120,7 @@
 </div>
 
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzWVTzSrBfEkKFZ14djm4o2UMA8lsBKRNSVaXxN9bwxpcDfHEbgm1hug2KS6ICV3UPu/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9XMcq3dLSfzJSiqtHVIdOaSmrG-f8zV-j8YR03gQ9TMQVoGMwMvkaDn1cUQqcY3Zg/exec';
   let currentUser = localStorage.getItem('chat_user') || null;
   let currentFdp = localStorage.getItem('chat_fdp') || '';
   let pollingInterval = null;
@@ -253,47 +253,49 @@
   }
 
   document.getElementById('chatForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const btn = document.getElementById('btnEnviar');
-    const inputMsg = document.getElementById('inputMensaje');
-    const fileInput = document.getElementById('inputFile');
+  e.preventDefault();
+  const btn = document.getElementById('btnEnviar');
+  const inputMsg = document.getElementById('inputMensaje');
+  const fileInput = document.getElementById('inputFile');
 
-    if (!inputMsg.value.trim()) return;
+  if (!inputMsg.value.trim() && fileInput.files.length === 0) return;
 
-    btn.disabled = true;
-    btn.innerText = 'Subiendo...';
+  btn.disabled = true;
+  btn.innerText = 'Subiendo...';
 
-    let imageData = null;
+  let fileData = null;
+  let fileName = null;
 
-    if (fileInput.files.length > 0) {
-      const file = fileInput.files[0];
-      const base64 = await fileToBase64(file);
-      imageData = { name: file.name, base64: base64 };
-    }
+  if (fileInput.files.length > 0) {
+    const file = fileInput.files[0];
+    fileData = await fileToBase64(file);
+    fileName = file.name;
+  }
 
-    const payload = {
-      action: 'sendMessage',
-      usuario: currentUser,
-      mensaje: inputMsg.value,
-      imageFile: imageData
-    };
+  const payload = {
+    action: 'sendMessage',
+    usuario: currentUser,
+    mensaje: inputMsg.value,
+    fileData: fileData,  // Mismo formato que DOX
+    fileName: fileName
+  };
 
-    try {
-      await fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify(payload)
+    });
 
-      inputMsg.value = '';
-      fileInput.value = '';
-      await cargarMensajes();
-    } catch (err) {
-      alert('Error al enviar el mensaje');
-    } finally {
-      btn.disabled = false;
-      btn.innerText = 'Enviar';
-    }
-  });
+    inputMsg.value = '';
+    fileInput.value = '';
+    await cargarMensajes();
+  } catch (err) {
+    alert('Error al enviar el mensaje');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = 'Enviar';
+  }
+});
 
   async function borrarMensaje(rowIndex) {
     if (!confirm('¿Eliminar este mensaje?')) return;
