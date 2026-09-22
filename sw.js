@@ -3,7 +3,8 @@ const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
-  './assets/oxivan_logo.jpg'
+  './assets/oxivan_logo.jpg',
+  './firebase-messaging-sw.js'
 
 ];
 
