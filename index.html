@@ -191,7 +191,9 @@
     }
     
     cargarMensajes();
-    pollingInterval = setInterval(cargarMensajes, 3000);
+    if (!pollingInterval) {
+      pollingInterval = setInterval(cargarMensajes, 3000);
+    }
   }
 
   function cerrarSesion() {
@@ -252,49 +254,53 @@
   }
 
   document.getElementById('chatForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const btn = document.getElementById('btnEnviar');
-  const inputMsg = document.getElementById('inputMensaje');
-  const fileInput = document.getElementById('inputFile');
+    e.preventDefault();
+    const btn = document.getElementById('btnEnviar');
+    const inputMsg = document.getElementById('inputMensaje');
+    const fileInput = document.getElementById('inputFile');
 
-  if (!inputMsg.value.trim() && fileInput.files.length === 0) return;
+    if (!inputMsg.value.trim() && fileInput.files.length === 0) return;
 
-  btn.disabled = true;
-  btn.innerText = 'Subiendo...';
+    btn.disabled = true;
+    btn.innerText = 'Subiendo...';
 
-  let fileData = null;
-  let fileName = null;
+    let fileData = null;
+    let fileName = null;
 
-  if (fileInput.files.length > 0) {
-    const file = fileInput.files[0];
-    fileData = await fileToBase64(file);
-    fileName = file.name;
-  }
+    if (fileInput.files.length > 0) {
+      const file = fileInput.files[0];
+      fileData = await fileToBase64(file);
+      fileName = file.name;
+    }
 
-  const payload = {
-    action: 'sendMessage',
-    usuario: currentUser,
-    mensaje: inputMsg.value,
-    fileData: fileData,  // Mismo formato que DOX
-    fileName: fileName
-  };
+    const payload = {
+      action: 'sendMessage',
+      usuario: currentUser,
+      mensaje: inputMsg.value.trim(),
+      fileData: fileData,
+      fileName: fileName
+    };
 
-  try {
-    await fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify(payload)
-    });
+    try {
+      // CORRECCIÓN CLAVE: Agregadas cabeceras requeridas para Apps Script
+      await fetch(SCRIPT_URL, {
+        method: 'POST',
+        mode: 'cors',
+        redirect: 'follow',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
 
-    inputMsg.value = '';
-    fileInput.value = '';
-    await cargarMensajes();
-  } catch (err) {
-    alert('Error al enviar el mensaje');
-  } finally {
-    btn.disabled = false;
-    btn.innerText = 'Enviar';
-  }
-});
+      inputMsg.value = '';
+      fileInput.value = '';
+      await cargarMensajes();
+    } catch (err) {
+      alert('Error al enviar el mensaje');
+    } finally {
+      btn.disabled = false;
+      btn.innerText = 'Enviar';
+    }
+  });
 
   async function borrarMensaje(rowIndex) {
     if (!confirm('¿Eliminar este mensaje?')) return;
@@ -336,7 +342,6 @@
   const messaging = firebase.messaging();
   const VAPID_KEY = "BKRPE-OTVPklEuULQ_Zfus4kSe3JH1UFnw1xk6Urhh9uiB7hCGkvoFWct_USKU4BX51tdQPVACwFc8iB4D8SnW4";
 
-  // Función para solicitar permiso de notificaciones y enviar Token al servidor
   async function registrarNotificaciones(usuario) {
     try {
       const permission = await Notification.requestPermission();
@@ -348,7 +353,6 @@
         });
 
         if (token) {
-          // Enviar el token al Apps Script
           await fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'cors',
@@ -366,12 +370,14 @@
     }
   }
 
-  // Modifica la función mostrarChat() existente para llamar al registro de notificaciones
+  // Modificación en el llamado a notificaciones con retraso
   const mostrarChatOriginal = mostrarChat;
   mostrarChat = function() {
     mostrarChatOriginal();
     if (currentUser) {
-      registrarNotificaciones(currentUser);
+      setTimeout(() => {
+        registrarNotificaciones(currentUser);
+      }, 1000);
     }
   };
 </script>
