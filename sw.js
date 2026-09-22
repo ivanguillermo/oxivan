@@ -1,11 +1,10 @@
-const CACHE_NAME = 'pwa-chat-v1';
+const CACHE_NAME = 'OXIVAN-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './manifest.json',
   './assets/oxivan_logo.jpg',
   './firebase-messaging-sw.js'
-
 ];
 
 self.addEventListener('install', (e) => {
@@ -34,16 +33,14 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (event) => {
   // Ignorar las peticiones al script de Google para que siempre vayan a la red directa
-  if (event.request.url.includes('script.google.com')) {
+  if (event.request.url.includes('script.google.com') || event.request.url.includes('script.googleusercontent.com')) {
     return;
   }
   
-  // Tu lógica normal de caché aquí...
-});
-
-  e.respondWith(
-    caches.match(e.request).then((cachedResponse) => {
-      return cachedResponse || fetch(e.request);
+  // Lógica de caché para el resto de recursos de la PWA
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request);
     })
   );
 });
