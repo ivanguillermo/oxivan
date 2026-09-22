@@ -317,5 +317,64 @@
     navigator.serviceWorker.register('./sw.js');
   }
 </script>
+
+<!-- Cargar Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js"></script>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCaYC1twuL7Ibtr6fU3eT6MAlJsQAu2H3o",
+    authDomain: "oxivan-b6492.firebaseapp.com",
+    projectId: "oxivan-b6492",
+    storageBucket: "oxivan-b6492.firebasestorage.app",
+    messagingSenderId: "265161051279",
+    appId: "1:265161051279:web:23f2c7c95155aed4a374fa",
+    measurementId: "G-9NY3MFDKG6"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const messaging = firebase.messaging();
+  const VAPID_KEY = "BKRPE-OTVPklEuULQ_Zfus4kSe3JH1UFnw1xk6Urhh9uiB7hCGkvoFWct_USKU4BX51tdQPVACwFc8iB4D8SnW4";
+
+  // Función para solicitar permiso de notificaciones y enviar Token al servidor
+  async function registrarNotificaciones(usuario) {
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission === 'granted') {
+        const registration = await navigator.serviceWorker.register('./firebase-messaging-sw.js');
+        const token = await messaging.getToken({
+          serviceWorkerRegistration: registration,
+          vapidKey: VAPID_KEY
+        });
+
+        if (token) {
+          // Enviar el token al Apps Script
+          await fetch(SCRIPT_URL, {
+            method: 'POST',
+            mode: 'cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              action: 'saveToken',
+              usuario: usuario,
+              token: token
+            })
+          });
+        }
+      }
+    } catch (err) {
+      console.error('Error suscribiendo a notificaciones:', err);
+    }
+  }
+
+  // Modifica la función mostrarChat() existente para llamar al registro de notificaciones
+  const mostrarChatOriginal = mostrarChat;
+  mostrarChat = function() {
+    mostrarChatOriginal();
+    if (currentUser) {
+      registrarNotificaciones(currentUser);
+    }
+  };
+</script>
 </body>
 </html>
