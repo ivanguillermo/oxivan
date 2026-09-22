@@ -32,12 +32,14 @@ self.addEventListener('activate', (e) => {
   self.clients.claim();
 });
 
-self.addEventListener('fetch', (e) => {
-  // Las peticiones al Apps Script (backend) nunca se guardan en caché para mantener la inmediatez del chat
-  if (e.request.url.includes('script.google.com')) {
-    e.respondWith(fetch(e.request));
+self.addEventListener('fetch', (event) => {
+  // Ignorar las peticiones al script de Google para que siempre vayan a la red directa
+  if (event.request.url.includes('script.google.com')) {
     return;
   }
+  
+  // Tu lógica normal de caché aquí...
+});
 
   e.respondWith(
     caches.match(e.request).then((cachedResponse) => {
