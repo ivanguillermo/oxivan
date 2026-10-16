@@ -1,21 +1,19 @@
 {
-  "name": "PWA Chat",
-  "short_name": "PWAChat",
+  "name": "OXIVAN Chat",
+  "short_name": "OXIVAN",
+  "description": "Chat privado OXIVAN",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
-  "background_color": "#f0f2f5",
-  "theme_color": "#0084ff",
   "orientation": "portrait",
+  "background_color": "#2b2315",
+  "theme_color": "#B8934A",
   "icons": [
     {
       "src": "./assets/oxivan_logo.jpg",
-      "sizes": "192x192",
-      "type": "image/jpg"
-    },
-    {
-      "src": "./assets/oxivan_logo.jpg",
-      "sizes": "512x512",
-      "type": "image/jpg"
+      "sizes": "1024x1024",
+      "type": "image/jpeg",
+      "purpose": "any"
     }
   ]
 }
