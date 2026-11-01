@@ -74,6 +74,10 @@
     button.btn-gold { background: #B8934A; color: white; border: none; padding: 10px 18px; border-radius: 20px; font-weight: bold; cursor: pointer; }
     button.btn-gold:disabled { background: #D6C29A; }
     button.btn-gold:hover { background: #906F2F; }
+    .msg-card audio{width:100%;margin-top:6px}.msg-card video{max-width:100%;border-radius:6px;margin-top:5px;display:block}
+    .btn-ico{background:#fff;border:1px solid #B8934A;border-radius:50%;width:40px;height:40px;font-size:18px;cursor:pointer;flex-shrink:0}
+    #recBar{display:none;align-items:center;gap:8px;background:#ffe3e3;border-radius:12px;padding:6px 10px;font-size:13px}
+    #recBar video{width:60px;height:45px;border-radius:6px;background:#000;object-fit:cover}#recInfo{flex:1}
   </style>
 </head>
 <body>
@@ -113,9 +117,14 @@
     <form class="input-area" id="chatForm">
       <div class="file-input-wrapper">
         <label for="inputFile">📎 Adjuntar archivo o tomar foto:</label>
-        <input type="file" id="inputFile" accept="image/*,application/pdf">
+        <input type="file" id="inputFile" accept="image/*,application/pdf,audio/*,video/*">
       </div>
+      <div id="recBar"><video id="recPrev" muted playsinline></video><span id="recInfo">🔴 0:00</span>
+        <button type="button" class="btn-header" style="color:#906F2F;border-color:#906F2F" onclick="detenerGrabacion(true)">Enviar</button>
+        <button type="button" class="btn-header" style="color:#906F2F;border-color:#906F2F" onclick="detenerGrabacion(false)">✕</button></div>
       <div class="input-row">
+        <button type="button" class="btn-ico" onclick="grabar('audio')" title="Grabar audio">🎤</button>
+        <button type="button" class="btn-ico" onclick="grabar('video')" title="Grabar video">🎥</button>
         <input type="text" id="inputMensaje" placeholder="Escribe un mensaje..." autocomplete="off">
         <button type="submit" id="btnEnviar" class="btn-gold">Enviar</button>
       </div>
@@ -221,7 +230,7 @@
       if (!token) return;
 
       const marca = currentUser + '|' + token;
-      if (localStorage.getItem('chat_token_marca') === marca) return; // ya registrado
+      if (localStorage.getItem('chat_token_marca') === marca && Date.now() - Number(localStorage.getItem('chat_token_ts') || 0) < 864e5) return; // ya registrado
 
       const res = await fetch(SCRIPT_URL, {
         method: 'POST', headers: POST_HEADERS,
@@ -231,6 +240,7 @@
       if (data.status === 'success') {
         localStorage.setItem('chat_token_marca', marca);
         localStorage.setItem('chat_token', token);
+        localStorage.setItem('chat_token_ts', Date.now());
       }
     } catch (err) {
       console.error('Error registrando notificaciones:', err);
@@ -332,25 +342,21 @@
       const estabaAbajo = area.scrollHeight - area.scrollTop - area.clientHeight < 80;
 
       if (!Array.isArray(data) || data.length === 0) {
+        window._prev = [];
         area.innerHTML = '<p style="text-align:center; color:#fff;">No hay mensajes aún.</p>';
         return;
       }
 
-      area.innerHTML = data.map(item => {
+      const pintar = (item) => {
         const esMio = item.Usuario === currentUser;
         const url = String(item.ImagenURL || '');
-        let adjunto = '';
-        if (/^https:\/\//.test(url)) {
-          adjunto = url.includes('googleusercontent.com')
-            ? `<a href="${esc(url)}" target="_blank" rel="noopener"><img src="${esc(url)}" class="msg-img" loading="lazy" alt="Imagen adjunta"></a>`
-            : `<a class="msg-file" href="${esc(url)}" target="_blank" rel="noopener">📄 Ver archivo</a>`;
-        }
+        const adjunto = adjuntoHTML(item);
         const btnDelete = esMio ? `<button class="btn-del" data-row="${Number(item.rowIndex)}">✕</button>` : '';
-        const avatar = /^https?:\/\//.test(item.FotoPerfil || '') ? item.FotoPerfil : AVATAR_DEFECTO;
+        const avatar = /^https?:\/\//.test(item.FotoPerfil || '') ? fotoUrl(item.FotoPerfil) : AVATAR_DEFECTO;
 
         return `
           <div class="msg-card ${esMio ? 'mine' : ''}">
-            <img src="${esc(avatar)}" class="msg-avatar" alt="Foto">
+            <img src="${esc(avatar)}" class="msg-avatar" alt="Foto" onerror="this.onerror=null;this.src=AVATAR_DEFECTO">
             <div class="msg-body">
               ${btnDelete}
               <div class="msg-author">${esc(item.Usuario)}</div>
@@ -359,7 +365,13 @@
               <div class="msg-time">${esc(item.Fecha)}</div>
             </div>
           </div>`;
-      }).join('');
+      };
+      // Solo se dibujan los mensajes nuevos: no se recargan imágenes ni se corta un audio que suena
+      const prev = window._prev || [];
+      const crece = prev.length > 0 && data.length > prev.length && prev.every((p, i) => JSON.stringify(p) === JSON.stringify(data[i]));
+      if (crece) area.insertAdjacentHTML('beforeend', data.slice(prev.length).map(pintar).join(''));
+      else area.innerHTML = data.map(pintar).join('');
+      window._prev = data;
 
       if (estabaAbajo || primera || forzarScroll) area.scrollTop = area.scrollHeight;
     } catch (err) {
@@ -406,7 +418,8 @@
     if (file.type.startsWith('image/')) {
       try { return await comprimirImagen(file); } catch (e) { console.warn('Sin comprimir:', e.message); }
     }
-    if (file.size > 8 * 1024 * 1024) throw new Error('El archivo pesa más de 8 MB');
+    const lim = /^(audio|video)\//.test(file.type) ? 20 : 8;
+    if (file.size > lim * 1024 * 1024) throw new Error('El archivo pesa más de ' + lim + ' MB');
     return { data: await fileToBase64(file), name: file.name };
   }
 
@@ -472,6 +485,83 @@
   // ============================================================
   //  ARRANQUE
   // ============================================================
+  // ============================================================
+  //  ADJUNTOS: imágenes, audio y video (Drive)
+  // ============================================================
+  function driveId(u) { const m = String(u).match(/(?:\/d\/|[?&]id=)([\w-]{20,})/); return m ? m[1] : ''; }
+  function fotoUrl(u) { const id = /drive\.google\.com/.test(u) ? driveId(u) : ''; return id ? 'https://drive.google.com/thumbnail?id=' + id + '&sz=w200' : u; }
+
+  function adjuntoHTML(item) {
+    const url = String(item.ImagenURL || ''), id = driveId(url);
+    if (!/^https:\/\//.test(url) || !id) return '';
+    const tipo = item.Tipo || (url.includes('googleusercontent.com') ? 'image' : 'pdf');
+    const ver = 'https://drive.google.com/file/d/' + id + '/view';
+    const media = 'https://drive.google.com/uc?export=download&id=' + id;
+    const enlace = (t) => `<a class="msg-file" href="${ver}" target="_blank" rel="noopener">${t}</a>`;
+    if (tipo === 'image') return `<a href="${ver}" target="_blank" rel="noopener"><img src="https://drive.google.com/thumbnail?id=${id}&sz=w1000" data-id="${id}" data-n="0" class="msg-img" loading="lazy" alt="Imagen adjunta" onerror="imgFallback(this)"></a>`;
+    if (tipo === 'audio') return `<audio controls preload="none" src="${media}"></audio>${enlace('🎤 Abrir audio')}`;
+    if (tipo === 'video') return `<video controls playsinline preload="metadata" src="${media}"></video>${enlace('🎥 Abrir video')}`;
+    return enlace('📄 Ver archivo');
+  }
+
+  // Si una forma de cargar la imagen falla, prueba la siguiente
+  function imgFallback(img) {
+    const id = img.dataset.id, n = Number(img.dataset.n) + 1;
+    img.dataset.n = n;
+    const alt = ['https://lh3.googleusercontent.com/d/' + id + '=w1000', 'https://drive.google.com/uc?export=view&id=' + id];
+    if (n <= alt.length) { img.src = alt[n - 1]; return; }
+    img.onerror = null;
+    const s = document.createElement('span');
+    s.className = 'msg-file'; s.textContent = '🖼️ No se pudo cargar (toca para abrir)';
+    img.replaceWith(s);
+  }
+
+  // ---------- Grabación de audio / video ----------
+  let rec = null;
+  async function grabar(tipo) {
+    if (rec) return;
+    if (!navigator.mediaDevices || !window.MediaRecorder) return alert('Tu navegador no permite grabar aquí.');
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(tipo === 'video' ? { audio: true, video: { facingMode: 'user', width: 640, height: 480 } } : { audio: true });
+      const cand = tipo === 'video' ? ['video/mp4', 'video/webm;codecs=vp8,opus', 'video/webm'] : ['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm'];
+      const mime = cand.find(t => MediaRecorder.isTypeSupported(t)) || '';
+      const opts = tipo === 'video' ? { videoBitsPerSecond: 800000, audioBitsPerSecond: 64000 } : { audioBitsPerSecond: 64000 };
+      if (mime) opts.mimeType = mime;
+      const mr = new MediaRecorder(stream, opts), trozos = [], t0 = Date.now();
+      const barra = document.getElementById('recBar'), prev = document.getElementById('recPrev');
+      mr.ondataavailable = e => { if (e.data.size) trozos.push(e.data); };
+      prev.style.display = tipo === 'video' ? 'block' : 'none';
+      if (tipo === 'video') { prev.srcObject = stream; prev.play().catch(() => {}); }
+      barra.style.display = 'flex';
+      const max = tipo === 'video' ? 60 : 300; // segundos (≈ 7 MB por minuto de video)
+      const timer = setInterval(() => {
+        const s = Math.floor((Date.now() - t0) / 1000);
+        document.getElementById('recInfo').textContent = '🔴 ' + Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+        if (s >= max) detenerGrabacion(true);
+      }, 500);
+      rec = { mr, enviar: false };
+      mr.onstop = () => {
+        clearInterval(timer);
+        stream.getTracks().forEach(t => t.stop());
+        barra.style.display = 'none'; prev.srcObject = null;
+        const enviar = rec && rec.enviar; rec = null;
+        if (!enviar || !trozos.length) return;
+        const base = (mr.mimeType || mime || tipo + '/webm').split(';')[0];
+        const ext = base.includes('mp4') ? (tipo === 'audio' ? '.m4a' : '.mp4') : '.webm';
+        const file = new File([new Blob(trozos, { type: base })], tipo + '_' + Date.now() + ext, { type: base });
+        const dt = new DataTransfer(); dt.items.add(file);
+        document.getElementById('inputFile').files = dt.files;
+        document.getElementById('chatForm').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+      };
+      mr.start(1000);
+    } catch (e) { alert('No se pudo usar el micrófono/cámara: ' + e.message); }
+  }
+  function detenerGrabacion(enviar) {
+    if (!rec) return;
+    rec.enviar = enviar;
+    if (rec.mr.state !== 'inactive') rec.mr.stop();
+  }
+
   if (currentUser) mostrarChat();
 </script>
 </body>
