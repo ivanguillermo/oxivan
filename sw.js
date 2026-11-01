@@ -45,7 +45,7 @@ self.addEventListener('notificationclick', (event) => {
 });
 
 // ---------- Caché offline ----------
-const CACHE_NAME = 'oxivan-chat-v2';
+const CACHE_NAME = 'oxivan-chat-v3';
 const ASSETS_TO_CACHE = ['./', './index.html', './manifest.json', './assets/oxivan_logo.jpg'];
 
 self.addEventListener('install', (e) => {
@@ -67,7 +67,7 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
-  if (req.method !== 'GET') return;
+  if (req.method !== 'GET' || req.headers.has('range') || new URL(req.url).origin !== self.location.origin) return;
   const url = req.url;
   // El chat, Drive y Firebase siempre van directo a la red
   if (url.includes('script.google.com') || url.includes('googleusercontent.com') ||
